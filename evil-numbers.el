@@ -5,6 +5,7 @@
 ;; Contributors:
 ;;               Matthew Fidler <matthew.fidler@gmail.com>
 ;;               Michael Markert <markert.michael@gmail.com>
+;;               Diego A. Mundo <diegoamundo@gmail.com>
 ;; URL: http://github.com/cofi/evil-numbers
 ;; Git-Repository: git://github.com/cofi/evil-numbers.git
 ;; Created: 2011-09-02
