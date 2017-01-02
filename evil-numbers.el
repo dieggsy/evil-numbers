@@ -58,6 +58,11 @@
 
 ;;; Code:
 
+(defcustom evil-numbers-preserve-padding nil
+  "Whether to preserve number padding."
+  :group 'evil-numbers
+  :type 'boolean)
+
 ;;;###autoload
 (defun evil-numbers/inc-at-pt (amount &optional no-region)
   "Increment the number at point or after point before end-of-line by `amount'.
@@ -102,13 +107,27 @@ applying the regional features of `evil-numbers/inc-at-point'.
          (progn
            (skip-chars-backward "0123456789")
            (skip-chars-backward "-")
-           (when (looking-at "-?\\([0-9]+\\)")
-             (replace-match
-              (format (format "%%0%dd" (- (match-end 1) (match-beginning 1)))
-                      (+ amount (string-to-number (match-string 0) 10))))
-             ;; Moves point one position back to conform with Vim
-             (forward-char -1)
-             t))
+           (let ((fstring
+                  (cond ((not evil-numbers-preserve-padding) "%d")
+
+                        ((and (< amount 0) (looking-at "\\(0+\\)\\(?:[^0-9]\\|$\\)"))
+                         (format "%%0%dd" (+ 1 (- (match-end 1) (match-beginning 1)))))
+
+                        ((or  (looking-at "\\([0-9]+\\)") (and (> amount 0) (looking-at "-\\(0+1\\)")))
+                         (format "%%0%dd" (- (match-end 1) (match-beginning 1))))
+
+                        ((looking-at "-\\([0-9]+\\)")
+                         (format "%%0%dd" (+ 1 (- (match-end 1) (match-beginning 1)))))
+
+
+                        )))
+             (when (looking-at "-?\\([0-9]+\\)")
+               (replace-match
+                (format fstring
+                        (+ amount (string-to-number (match-string 0) 10))))
+               ;; Moves point one position back to conform with Vim
+               (forward-char -1)
+               t)))
          (error "No number at point or until end of line")))))))
 
 ;;;###autoload
