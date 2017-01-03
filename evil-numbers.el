@@ -63,6 +63,11 @@
   "Note: Do not modify this variable, use `evil-numbers/inc-at-pt-pad' and
 `evil-numbers/dec-at-pt-pad' to preserve padding.")
 
+(defcustom evil-numbers-deactivate-mark nil
+  "Whether to deactivate mark after using evil-numbers on a region."
+  :group 'evil-numbers
+  :type 'boolean)
+
 ;;;###autoload
 (defun evil-numbers/inc-at-pt (amount &optional no-region)
   "Increment the number at point or after point before end-of-line by `amount'.
@@ -86,7 +91,7 @@ applying the regional features of `evil-numbers/inc-at-point'.
             (evil-numbers/inc-at-pt amount 'no-region)
             ;; Undo vim compatability.
             (forward-char 1)))))
-    (setq deactivate-mark t))
+    (setq deactivate-mark evil-numbers-deactivate-mark))
    (t
     (save-match-data
       (if (not (evil-numbers/search-number))
