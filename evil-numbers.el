@@ -59,10 +59,9 @@
 
 ;;; Code:
 
-(defcustom evil-numbers-preserve-padding nil
-  "Whether to preserve number padding."
-  :group 'evil-numbers
-  :type 'boolean)
+(defvar evil-numbers-preserve-padding nil
+  "Note: Do not modify this variable, use `evil-numbers/inc-at-pt-pad' and
+`evil-numbers/dec-at-pt-pad' to preserve padding.")
 
 ;;;###autoload
 (defun evil-numbers/inc-at-pt (amount &optional no-region)
@@ -108,28 +107,41 @@ applying the regional features of `evil-numbers/inc-at-point'.
          (progn
            (skip-chars-backward "0123456789")
            (skip-chars-backward "-")
-           (let ((fstring
-                  (cond ((not evil-numbers-preserve-padding) "%d")
+           (when (looking-at "-?\\([0-9]+\\)")
+             (let ((fstring
+                    (cond ((not evil-numbers-preserve-padding) "%d")
 
-                        ((and (< amount 0) (looking-at "\\(0+\\)\\(?:[^0-9]\\|$\\)"))
-                         (format "%%0%dd" (+ 1 (- (match-end 1) (match-beginning 1)))))
+                          ((and (< amount 0) (looking-at "\\(0+\\)\\(?:[^0-9]\\|$\\)"))
+                           (format "%%0%dd" (+ 1 (- (match-end 1) (match-beginning 1)))))
 
-                        ((or  (looking-at "\\([0-9]+\\)") (and (> amount 0) (looking-at "-\\(0+1\\)")))
-                         (format "%%0%dd" (- (match-end 1) (match-beginning 1))))
+                          ((or  (looking-at "\\([0-9]+\\)") (and (> amount 0) (looking-at "-\\(0+1\\)")))
+                           (format "%%0%dd" (- (match-end 1) (match-beginning 1))))
 
-                        ((looking-at "-\\([0-9]+\\)")
-                         (format "%%0%dd" (+ 1 (- (match-end 1) (match-beginning 1)))))
+                          ((looking-at "-\\([0-9]+\\)")
+                           (format "%%0%dd" (+ 1 (- (match-end 1) (match-beginning 1))))))))
 
-
-                        )))
-             (when (looking-at "-?\\([0-9]+\\)")
                (replace-match
                 (format fstring
-                        (+ amount (string-to-number (match-string 0) 10))))
-               ;; Moves point one position back to conform with Vim
-               (forward-char -1)
-               t)))
+                        (+ amount (string-to-number (match-string 0) 10)))))
+             ;; Moves point one position back to conform with Vim
+             (forward-char -1)
+             t))
          (error "No number at point or until end of line")))))))
+
+;;;###autoload
+(defun evil-numbers/inc-at-pt-pad (amount)
+  "Increment the number at point or after point before end-of-line by `amount',
+and preserve padding. When region is selected, increment all numbers in the
+region by `amount'
+
+NO-REGION is internal flag that allows
+`evil-numbers/inc-at-point' to be called recursively when
+applying the regional features of `evil-numbers/inc-at-point'.
+
+"
+  (interactive "p*")
+  (let ((evil-numbers-preserve-padding t))
+    (evil-numbers/inc-at-pt amount)))
 
 ;;;###autoload
 (defun evil-numbers/dec-at-pt (amount)
@@ -140,6 +152,18 @@ If a region is active, decrement all the numbers at a point by `amount'.
 This function uses `evil-numbers/inc-at-pt'"
   (interactive "p*")
   (evil-numbers/inc-at-pt (- amount)))
+
+;;;###autoload
+"Decrement the number at point or after point before end-of-line by `amount',
+and preserve padding.
+
+If a region is active, decrement all the numbers at a point by `amount'.
+
+This function uses `evil-numbers/inc-at-pt'"
+(defun evil-numbers-dec-at-pt-pad (amount)
+  (interactive "p*")
+  (let ((evil-numbers-preserve-padding t))
+    (evil-numbers/inc-at-pt (- amount))))
 
 ;;; utils
 
@@ -155,9 +179,9 @@ decimal: [0-9]+, e.g. 42 or 23"
   (or
    ;; numbers or format specifier in front
    (looking-back (rx (or (+? digit)
-                        (and "0" (or (and (in "bB") (*? (in "01")))
-                                  (and (in "oO") (*? (in "0-7")))
-                                  (and (in "xX") (*? (in digit "A-Fa-f"))))))))
+                         (and "0" (or (and (in "bB") (*? (in "01")))
+                                      (and (in "oO") (*? (in "0-7")))
+                                      (and (in "xX") (*? (in digit "A-Fa-f"))))))))
    ;; search for number in rest of line
    ;; match 0 of specifier or digit, being in a literal and after specifier is
    ;; handled above
@@ -172,15 +196,20 @@ decimal: [0-9]+, e.g. 42 or 23"
 	 (<= 0 (skip-chars-forward "bBoOxX"))))))
 
 (defun evil-numbers/search-and-replace (look-back skip-back search-forward inc base)
-  "When looking back at `LOOK-BACK' skip chars `SKIP-BACK'backwards and replace number incremented by `INC' in `BASE' and return non-nil."
-  (when (looking-back look-back)
-    (skip-chars-backward skip-back)
+  "When looking back at `LOOK-BACK' skip chars `SKIP-BACK' backwards and replace
+number incremented by `INC' in `BASE' and return non-nil."
+  (skip-chars-backward skip-back)
+  (backward-char 2)
+  (if  (not  (looking-at look-back))
+      (forward-char 2)
+    (forward-char 2)
     (search-forward-regexp search-forward)
-    (replace-match (evil-numbers/format (+ inc (string-to-number (match-string 1) base))
-                                        (length (match-string 1))
-                                        base))
-	;; Moves point one position back to conform with Vim
-	(forward-char -1)
+    (let ((width (if evil-numbers-preserve-padding (length (match-string 1)) 0)))
+      (replace-match (evil-numbers/format (+ inc (string-to-number (match-string 1) base))
+                                          width
+                                          base)))
+    ;; Moves point one position back to conform with Vim
+    (forward-char -1)
     t))
 
 (defun evil-numbers/format (num width base)
