@@ -75,7 +75,7 @@ applying the regional features of `evil-numbers/inc-at-point'.
 "
   (interactive "p*")
   (cond
-   ((and (not no-region) (region-active-p))
+   ((and (not no-region) (or (evil-visual-state-p) (region-active-p)))
     (let (deactivate-mark
           (rb (region-beginning))
           (re (region-end)))
