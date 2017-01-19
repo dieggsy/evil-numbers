@@ -83,12 +83,31 @@ applying the regional features of `evil-numbers/inc-at-point'.
    ((and (not no-region) (or (evil-visual-state-p) (region-active-p)))
     (let (deactivate-mark
           (rb (region-beginning))
-          (re (region-end)))
+          (re (region-end))
+          (cc (- (point-max) (point-min))))
       (save-excursion
         (save-match-data
           (goto-char rb)
           (while (re-search-forward "\\(?:0\\(?:[Bb][01]+\\|[Oo][0-7]+\\|[Xx][0-9A-Fa-f]+\\)\\|-?[0-9]+\\)" re t)
-            (evil-numbers/inc-at-pt amount 'no-region)
+            (cond ((and (featurep 'evil)
+                        evil-visual-block-overlays
+                        (-some-p 'evil-numbers--point-in-overlay-p evil-visual-block-overlays))
+                   (evil-numbers/inc-at-pt amount 'no-region)
+                   (setq old-cc cc)
+                   (setq cc (- (point-max) (point-min)))
+                   (setq re (+ re (- cc old-cc))))
+                  ((and (featurep 'evil)
+                        evil-visual-block-overlays)
+                   nil)
+                  (t
+                   (evil-numbers/inc-at-pt amount 'no-region)
+                   (setq old-cc cc)
+                   (setq cc (- (point-max) (point-min)))
+                   (setq re (+ re (- cc old-cc)))))
+            ;; (if (and (boundp 'evil-visual-block-overlays) evil-visual-block-overlays)
+            ;;     (and (-some-p 'evil-numbers--point-in-overlay-p evil-visual-block-overlays)
+            ;;          (evil-numbers/inc-at-pt amount 'no-region))
+            ;;   (evil-numbers/inc-at-pt amount 'no-region))
             ;; Undo vim compatability.
             (forward-char 1)))))
     (setq deactivate-mark evil-numbers-deactivate-mark))
@@ -240,6 +259,15 @@ representation of `NUMBER' is smaller."
                  (make-string (- width len) fillchar)
                "")
              nums))))
+
+;; (defun evil-numbers--point-in-overlay-p (overlay)
+;; "Return t if point is in OVERLAY."
+;; (and (<= (point) (+ 1 (overlay-end overlay)))
+;; (>= (point) (overlay-start overlay))))
+(defun evil-numbers--point-in-overlay-p (overlay)
+  "Return t if point is in OVERLAY."
+  (and (<= (point) (overlay-end overlay))
+       (>= (point) (overlay-start overlay))))
 
 (provide 'evil-numbers)
 ;;; evil-numbers.el ends here
