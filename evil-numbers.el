@@ -179,13 +179,13 @@ This function uses `evil-numbers/inc-at-pt'"
   (evil-numbers/inc-at-pt (- amount)))
 
 ;;;###autoload
-"Decrement the number at point or after point before end-of-line by `amount',
+(defun evil-numbers-dec-at-pt-pad (amount)
+  "Decrement the number at point or after point before end-of-line by `amount',
 and preserve padding.
 
 If a region is active, decrement all the numbers at a point by `amount'.
 
 This function uses `evil-numbers/inc-at-pt'"
-(defun evil-numbers-dec-at-pt-pad (amount)
   (interactive "p*")
   (let ((evil-numbers-preserve-padding t))
     (evil-numbers/inc-at-pt (- amount))))
